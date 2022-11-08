@@ -18,33 +18,27 @@ import (
 var validate = validator.New()
 
 var batalhaCollection *mongo.Collection = OpenCollection(Client, "batalhas")
+var environmentCollection *mongo.Collection = OpenCollection(Client, "environment")
 
-func CalcIniciativa() {}
-func CalcDano()       {}
-func AddPersonagem(c *gin.Context) {
-
+func CalcIniciative() {}
+func CalcDamage()     {}
+func AddEnvironment(c *gin.Context) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	var personagem models.Personagem
-
-	if err := c.BindJSON(&personagem); err != nil {
+	var environment models.Environment
+	if err := c.BindJSON(&environment); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		fmt.Println(err)
 		return
 	}
-
-	validationErr := validate.Struct(personagem)
-
+	validationErr := validate.Struct(environment)
 	if validationErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
-		fmt.Println(validationErr)
 		return
 	}
 
-	personagem.ID = primitive.NewObjectID()
-	result, insertErr := batalhaCollection.InsertOne(ctx, personagem)
-
+	environment.ID = primitive.NewObjectID()
+	result, insertErr := environmentCollection.InsertOne(ctx, environment)
 	if insertErr != nil {
-		msg := fmt.Sprintf("personagem não foi criado")
+		msg := fmt.Sprintf("environment wasn't created")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 		fmt.Println(insertErr)
 		return
@@ -53,64 +47,142 @@ func AddPersonagem(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 
 }
+func AddCharacter(c *gin.Context) {
 
-func CalcularFa(c *gin.Context) int32 {
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	var character models.Character
+
+	if err := c.BindJSON(&character); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		fmt.Println(err)
+		return
+	}
+
+	validationErr := validate.Struct(character)
+
+	if validationErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		fmt.Println(validationErr)
+		return
+	}
+
+	character.ID = primitive.NewObjectID()
+	result, insertErr := batalhaCollection.InsertOne(ctx, character)
+
+	if insertErr != nil {
+		msg := fmt.Sprintf("character não foi criado")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		fmt.Println(insertErr)
+		return
+	}
+	defer cancel()
+	c.JSON(http.StatusOK, result)
+
+}
+func GetEnvironment(c *gin.Context) {
+	environmentName := c.Params.ByName("name")
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
+	var environment []bson.M
+
+	cursor, err := environmentCollection.Find(ctx, bson.M{"name": environmentName})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		//fmt.Println(err)
+		return
+	}
+
+	if err = cursor.All(ctx, &environment); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		//	fmt.Println(err)
+		return
+	}
+
+	defer cancel()
+
+	fmt.Println(environment)
+
+	c.JSON(http.StatusOK, environment)
+}
+func GetEnvironments(c *gin.Context) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
+	var environment []bson.M
+
+	cursor, err := environmentCollection.Find(ctx, bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println(err)
+		return
+	}
+
+	if err = cursor.All(ctx, &environment); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println(err)
+		return
+	}
+
+	defer cancel()
+
+	//fmt.Println(environment)
+
+	c.JSON(http.StatusOK, environment)
+}
+func CalcFa(c *gin.Context) int32 {
 	var _, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	var magico bool = true
+	var magic bool = true
 
-	nome := c.Params.ByName("nome")
-	//forca, _ := strconv.ParseInt(c.Params.ByName("forca"), 10, 32)
-	forca := helpers.ConvertStringToInt32(c.Params.ByName("forca"))
-	destreza := helpers.ConvertStringToInt32(c.Params.ByName("destreza"))
-	inteligencia := helpers.ConvertStringToInt32(c.Params.ByName("inteligencia"))
+	name := c.Params.ByName("name")
+	//forca, _ := strconv.ParseInt(c.Params.ByName("Vigor"), 10, 32)
+	vigor := helpers.ConvertStringToInt32(c.Params.ByName("vigor"))
+	dexterity := helpers.ConvertStringToInt32(c.Params.ByName("dexterity"))
+	empiricism := helpers.ConvertStringToInt32(c.Params.ByName("empiricism"))
 
 	//intVar, err := strconv.Atoi(strVar)
-	var fa int32 = forca + destreza
-	if magico {
-		fa = inteligencia + destreza
+	var fa int32 = vigor + dexterity
+	if magic {
+		fa = empiricism + dexterity
 	}
 
 	// limpeza de chamdas de recursos
 	defer cancel()
-	fmt.Println(fa, nome)
+	fmt.Println(fa, name)
 	//c.JSON(http.StatusOK,)
 	return fa
 }
 
-func UpdatePersonagem(c *gin.Context) {
+func UpdateCharacter(c *gin.Context) {
 
-	personagemID := c.Params.ByName("id")
-	docID, _ := primitive.ObjectIDFromHex(personagemID)
+	characterID := c.Params.ByName("id")
+	docID, _ := primitive.ObjectIDFromHex(characterID)
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
-	type Personagem struct {
-		Nome         *string `json:"nome"`
-		Forca        *int32  `json:"forca"`
-		Armadura     *int32  `json:"armadura"`
-		Resistencia  *int32  `json:"resistencia"`
-		Destreza     *int32  `json:"destreza"`
-		Inteligencia *int32  `json:"inteligencia"`
-		Mana         *int32  `json:"mana"`
-		Xp           *int32  `json:"xp"`
-		Nivel        *int32  `json:"nivel"`
+	type Character struct {
+		Name       *string `json:"name"`
+		Vigor      *int32  `json:"vigor"`
+		Empiricism *int32  `json:"resistency"`
+		Dexterity  *int32  `json:"Dexterity"`
+		Mana       *int32  `json:"mana"`
+		Xp         *int32  `json:"xp"`
+		Level      *int32  `json:"nivel"`
 	}
-	var personagem Personagem
-	if err := c.BindJSON(&personagem); err != nil {
+
+	var character Character
+	if err := c.BindJSON(&character); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		fmt.Println(err)
 		return
 	}
 
 	result, err := batalhaCollection.UpdateOne(ctx, bson.M{"_id": docID}, bson.D{
-		{Key: "$set", Value: bson.D{{Key: "nome", Value: personagem.Nome}}},
-		{Key: "$set", Value: bson.D{{Key: "forca", Value: personagem.Forca}}},
-		{Key: "$set", Value: bson.D{{Key: "armadura", Value: personagem.Armadura}}},
-		{Key: "$set", Value: bson.D{{Key: "resistencia", Value: personagem.Resistencia}}},
-		{Key: "$set", Value: bson.D{{Key: "destreza", Value: personagem.Destreza}}},
-		{Key: "$set", Value: bson.D{{Key: "inteligencia", Value: personagem.Inteligencia}}},
-		{Key: "$set", Value: bson.D{{Key: "mana", Value: personagem.Mana}}},
-		{Key: "$set", Value: bson.D{{Key: "xp", Value: personagem.Xp}}},
-		{Key: "$set", Value: bson.D{{Key: "nivel", Value: personagem.Nivel}}},
+		{Key: "$set", Value: bson.D{{Key: "name", Value: character.Name}}},
+		{Key: "$set", Value: bson.D{{Key: "dexterity", Value: character.Dexterity}}},
+		{Key: "$set", Value: bson.D{{Key: "empiricism", Value: character.Empiricism}}},
+		{Key: "$set", Value: bson.D{{Key: "level", Value: character.Level}}},
+		{Key: "$set", Value: bson.D{{Key: "vigor", Value: character.Vigor}}},
+		{Key: "$set", Value: bson.D{{Key: "mana", Value: character.Mana}}},
+		{Key: "$set", Value: bson.D{{Key: "xp", Value: character.Xp}}},
 	},
 	)
 
@@ -125,10 +197,10 @@ func UpdatePersonagem(c *gin.Context) {
 	c.JSON(http.StatusOK, result.ModifiedCount)
 
 }
-func DeletePersonagem(c *gin.Context) {
+func DeleteCharacter(c *gin.Context) {
 
-	personagem := c.Params.ByName("id")
-	docId, _ := primitive.ObjectIDFromHex(personagem)
+	character := c.Params.ByName("id")
+	docId, _ := primitive.ObjectIDFromHex(character)
 
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
@@ -145,11 +217,11 @@ func DeletePersonagem(c *gin.Context) {
 }
 func Skirmish()          {}
 func RelatorioSkirmish() {}
-func GetPersonagens(c *gin.Context) {
+func GetCharacters(c *gin.Context) {
 
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
-	var personagens []bson.M
+	var characters []bson.M
 
 	cursor, err := batalhaCollection.Find(ctx, bson.M{})
 	if err != nil {
@@ -158,7 +230,7 @@ func GetPersonagens(c *gin.Context) {
 		return
 	}
 
-	if err = cursor.All(ctx, &personagens); err != nil {
+	if err = cursor.All(ctx, &characters); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		fmt.Println(err)
 		return
@@ -166,19 +238,19 @@ func GetPersonagens(c *gin.Context) {
 
 	defer cancel()
 
-	fmt.Println(personagens)
+	//fmt.Println(characters)
 
-	c.JSON(http.StatusOK, personagens)
+	c.JSON(http.StatusOK, characters)
 }
 
-func GetPersonagem(c *gin.Context) {
+func Getcharacter(c *gin.Context) {
 
-	nomePersonagem := c.Params.ByName("nome")
+	nomecharacter := c.Params.ByName("nome")
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
-	var personagem []bson.M
+	var character []bson.M
 
-	cursor, err := batalhaCollection.Find(ctx, bson.M{"nome": nomePersonagem})
+	cursor, err := batalhaCollection.Find(ctx, bson.M{"nome": nomecharacter})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -186,7 +258,7 @@ func GetPersonagem(c *gin.Context) {
 		return
 	}
 
-	if err = cursor.All(ctx, &personagem); err != nil {
+	if err = cursor.All(ctx, &character); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		fmt.Println(err)
 		return
@@ -194,7 +266,7 @@ func GetPersonagem(c *gin.Context) {
 
 	defer cancel()
 
-	fmt.Println(personagem)
+	fmt.Println(character)
 
-	c.JSON(http.StatusOK, personagem)
+	c.JSON(http.StatusOK, character)
 }

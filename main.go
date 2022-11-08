@@ -21,11 +21,13 @@ func main() {
 	router.Use(cors.Default())
 
 	router.GET("")
-	router.POST("/personagem/criar", routes.AddPersonagem)
-	router.DELETE("/personagem/deletarPersonagem/:id", routes.DeletePersonagem)
-	router.PUT("/personagem/updatePersonagem/:id", routes.UpdatePersonagem)
-	router.GET("/personagem/getPersonagem/:nome", routes.GetPersonagem)
-	router.GET("/personagem/getPersonagens", routes.GetPersonagens)
+	router.GET("/environment/getEnvironment/:name", routes.GetEnvironment)
+	router.POST("/character/create", routes.AddCharacter)
+	router.DELETE("/character/deleteCharacter/:id", routes.DeleteCharacter)
+	router.PUT("/character/updateCharacter/:id", routes.UpdateCharacter)
+	router.GET("/character/getCharacter/:name", routes.Getcharacter)
+	router.GET("/character/getCharacters", routes.GetCharacters)
+	router.POST("/environment/create", routes.AddEnvironment)
 
 	router.POST("")
 
